@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>APP2</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- 引入组件库 -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+</head>
+<body>
+<div id="app">
+    <h1>APP2</h1>
+    <div v-if="userIsLogin != true">
+        请先登录!
+    </div>
+    <div v-if="userIsLogin == true">
+        欢迎{{userInfo.username}}登录系统!
+        <el-button @click="logout">注销</el-button>
+    </div>
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                userIsLogin: false,
+                userInfo: {}
+            }
+        },
+        created() {
+            // 判断用户是否登录
+            var userIsLogin = this.userIsLogin;
+            if (!userIsLogin) {
+                // 如果没有登录，判断是否有临时票据tmpTicket
+                var tmpTicket = this.getUrlParam("tmpTicket");
+                console.log("tmpTicket" + tmpTicket);
+                if (tmpTicket != null && tmpTicket !== "" && tmpTicket !== undefined) {
+                    // 如果有临时票据，就携带临时票据向CAS发起请求，验证获取用户会话信息
+                    axios.defaults.withCredentials = true;
+                    axios.post('http://www.cas.com:9000/verifyTmpTicket?tmpTicket=' + tmpTicket)
+                        .then(res => {
+                            if (res.data.code === 200) {
+                                var userInfo = res.data.data;
+                                this.userInfo = userInfo;
+                                this.userIsLogin = true;
+                                this.setCookie("user", JSON.stringify(userInfo));
+
+                                /*
+                                    由于http://www.app2.com/?tmpTicket=a75b6e628b894d4393d2257196408627 中的
+                                    tmpTicket临时门票只能使用一次，因此重定向过来的请求解析完后需要把tmpTicket参数去掉，
+                                    只留下http://www.app2.com即可，并且不能刷新页面
+                                 */
+
+                                // 不刷新页面修改URL
+                                var url = window.location.href;
+                                var valiable = url.split("?")[0];
+                                window.history.pushState({},0,valiable);
+                            } else {
+                                alert(res.data.msg);
+                            }
+                        });
+                } else {
+                    // 如果没有临时票据，说明用户没有登录过，那么就跳转到CAS做登录认证
+                    window.location.href = "http://www.cas.com:9000/login?returnUrl=http://www.app2.com"
+                }
+
+            }
+
+        },
+        methods: {
+            logout() {
+                var userId = this.userInfo.id;
+                axios.defaults.withCredentials = true;
+                axios.post('http://www.cas.com:9000/logout?userId=' + userId)
+                    .then(res => {
+                        if (res.data.code === 200) {
+                            var userInfo = res.data.data;
+                            this.userInfo = {};
+                            this.userIsLogin = false;
+                            this.clearCookie("user");
+                            alert("退出")
+                        } else {
+                            alert(res.data.msg);
+                        }
+                    })
+            },
+            // 从url中获取参数对应的值
+            getUrlParam(key) {
+                var query = window.location.search.substring(1);
+                var vars = query.split("&");
+                for (var i = 0; i < vars.length; i++) {
+                    var pair = vars[i].split("=");
+                    if (pair[0] === key) {
+                        return pair[1];
+                    }
+                }
+                return "";
+            },
+
+            // 设置cookie
+            setCookie(name, value, seconds) {
+                // second为0表示永不过期
+                seconds = seconds || 0;
+                var expires = "";
+                // 设置cookie生存时间
+                if (seconds !== 0) {
+                    var date = new Date();
+                    date.setTime(date.getTime() + (seconds * 1000));
+                    expires = "; expires=" + date.toGMTString();
+                }
+                // 转码并赋值
+                document.cookie = name + "=" + escape(value) + expires + "; path=/";
+            },
+
+            // 获取cookie
+            getCookie(name) {
+                var nameEQ = name + '='
+                // 把cookie分割成组
+                var ca = document.cookie.split(';')
+                for (var i = 0; i < ca.length; i++) {
+                    // 取得字符串
+                    var c = ca[i]
+                    // 判断一下字符串有没有前导空格
+                    while (c.charAt(0) == ' ') {
+                        // 有的话，从第二位开始取
+                        c = c.substring(1, c.length)
+                    }
+                    // 如果含有我们要的name
+                    if (c.indexOf(nameEQ) == 0) {
+                        // 解码并截取我们要值
+                        return unescape(c.substring(nameEQ.length, c.length))
+                    }
+                }
+                return false
+            },
+
+            // 清除cookie
+            clearCookie(name) {
+                setCookie(name, "", -1);
+            }
+        }
+    })
+</script>
+</body>
+</html>
+
