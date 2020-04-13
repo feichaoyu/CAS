@@ -2,7 +2,7 @@
 
 ## 项目说明
 
-有两个外部系统想要做单点登录，有一个单点登录认证中心系统 **CAS **。
+有两个外部系统想要做单点登录，有一个单点登录认证中心系统 **CAS**。
 
 CAS 采用前后端分离架构，后端使用 Spring Boot，前端使用 nginx 做代理。
 
@@ -46,11 +46,15 @@ server {
 }
 ```
 
+### redis
+
+本地 redis 环境
+
 ## 使用
 
 启动后端Spring Boot，前端 nginx。
 
-浏览器输入www.app1.com，登录后，另起一个窗口，输入www.app2.com，无需登录。
+浏览器输入`www.app1.com`，登录后，另起一个窗口，输入`www.app2.com`，无需登录。
 
 注销也是同理。
 
@@ -277,7 +281,7 @@ public void login(String returnUrl, HttpServletRequest request, HttpServletRespo
 
 
 
-完整代码地址：
+完整代码地址：https://github.com/FeiChaoyu/CAS
 
 公众号
 
